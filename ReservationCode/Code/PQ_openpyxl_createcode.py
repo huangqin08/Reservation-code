@@ -1,45 +1,63 @@
 import random
 import time
-import xlsxwriter
+import openpyxl
 import configparser
 
 from Code.myabc_db import MyABC_db
 
 sl = MyABC_db('../Config/db_config.conf', 'TESTDB')
 
-def code_do(number,stripling_name,initial,num,specification,product_name,channel):
-# def code_do(filepath, num, initial, specification, channels):
+def code_do(number, stripling_name, initial, num, specification, product_name, channel):
+    # def code_do(filepath, num, initial, specification, channels):
     # 文件名称中的时间
     now = time.strftime('%Y-%m-%d')
     filename = number + stripling_name + '-' + '预约编码' + now + '.xlsx'
-    filepath = 'D:\\PythonProject\\ReservationCode\\Codefiles\\' + filename
+    # filepath = 'D:\\PythonProject\\ReservationCode\\Codefiles\\' + filename
+    filepath = '../Codefiles/' + filename
     channels = channel + '-' + stripling_name + '-' + product_name
 
-    workfile = xlsxwriter.Workbook(filepath)  # 创建Excel文件,保存
-    worksheet = workfile.add_worksheet('预约编码')  # 创建工作表
-    col = ['A1', 'B1', 'C1']
-    title = ['渠道名称', '预约规格', '预约编码']
-    worksheet.write_row(col[0], title)
+    # 创建Excel文件
+    book = openpyxl.Workbook()
+    # 创建工作表
+    booksheet = book.active
+    booksheet.title = '预约编码'
+    # 写标题栏
+    booksheet['A1'] = '渠道名称'
+    booksheet['B1'] = '预约规格'
+    booksheet['C1'] = '预约编码'
+
+    # 写入内容
+    # row = 2
+    #
+    # for name, age in name2Age.items():
+    #     booksheet.cell(row, 1).value = name
+    #     booksheet.cell(row, 2).value = age
+    #     row += 1
 
     creattime = time.strftime('%Y-%m-%d %H:%M:%S')
-    print('num', num)
-    for i in range(num):
+
+    i = 2
+    while True:
         result = str(random.randint(0, 9999)).zfill(4)
         code = initial + result
-        re = sl.select_record_fetchone("select * from codenumber where code = '%s' " % code)
-        # re = sl.select_record_fetchone("select * from codenumber where code = 'ZBDC59628020'")
+        re = sl.select_record_fetchone("select * from codenumber where code = '{}'".format(code))
+        # re = sl.select_record_fetchone("select * from codenumber where code = 'CFCCBJ0500111'")
         print('re:', re)
         if re is None:
-            worksheet.write(i + 1, 0, channels)
-            worksheet.write(i + 1, 1, specification)
-            worksheet.write(i + 1, 2, code)
+            booksheet.cell(i, 1, channels)
+            booksheet.cell(i, 2, specification)
+            booksheet.cell(i, 3, code)
             sl.insert_record(
                 "insert into codenumber(code,createtime)values ('{}','{}')".format(code, creattime))
             print(result)
+            i += 1
         else:
             print('预约编码重复，不进入数据库和excel表格中')
-    workfile.close()
+        if i > num + 1:
+            break
+    book.save(filepath)
     return filepath
+
 
 def get_co_config():
     config = configparser.ConfigParser()
@@ -55,9 +73,4 @@ def get_co_config():
     specification = config.get('code_project', 'specification')
     product_name = config.get('code_project', 'product_name')
     channel = config.get('code_project', 'channel')
-    return number,stripling_name,initial,num,specification,product_name,channel
-
-
-if __name__ == '__main__':
-    number,stripling_name,initial,num,specification,product_name,channel=get_co_config()
-    code_do(number,stripling_name,initial,num,specification,product_name,channel)
+    return number, stripling_name, initial, num, specification, product_name, channel
